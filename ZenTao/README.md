@@ -16,8 +16,8 @@ ZenTao 样式辅助 & 功能扩展
 2. 复制分支、复制标题时可自定义git前缀
 
 ```javascript
-// 修改项目前缀，在控制台执行如下代码
-window.localStorage.setItem('_customerFilter_projectPrefix', 'ABC')
+// 修改项目代号，在控制台执行如下代码，点击复制分支或复制标题时，会自动添加前缀，例如： feature/ABC-12345
+window.localStorage.setItem('_customFilter_projectPrefix', 'ABC')
 ```
 
 ## Roadmap
