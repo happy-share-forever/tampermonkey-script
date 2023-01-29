@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.0
+// @version      2.1
 // @description  ZenTao style and function enhancement
 // @author       happy share org
 // @include      /^https:\/\/zentao.*$/
@@ -27,7 +27,12 @@
 
   const _window = window
   const urlDomain = location.origin
-  const cachedPrefix = _window.localStorage.getItem('_customerFilter_projectPrefix')
+  let  cachedPrefix = _window.localStorage.getItem('_customFilter_projectPrefix')
+  if (!cachedPrefix) {
+    cachedPrefix = _window.prompt('请补全项目代号，之后可以通过 localStorage _customFilter_projectPrefix 来修改。', 'XXX')
+    _window.localStorage.setItem('_customFilter_projectPrefix', cachedPrefix || 'XXX')
+  }
+
   const projectPrefix = cachedPrefix || 'XXX'
 
   function enhanceTask (document) {
