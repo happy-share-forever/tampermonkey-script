@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.1
+// @version      2.2
 // @description  ZenTao style and function enhancement
 // @author       happy share org
 // @include      /^https:\/\/zentao.*$/
@@ -27,13 +27,27 @@
 
   const _window = window
   const urlDomain = location.origin
-  let  cachedPrefix = _window.localStorage.getItem('_customFilter_projectPrefix')
+  let cachedPrefix = _window.localStorage.getItem('_customFilter_projectPrefix')
   if (!cachedPrefix) {
     cachedPrefix = _window.prompt('请补全项目代号，之后可以通过 localStorage _customFilter_projectPrefix 来修改。', 'XXX')
     _window.localStorage.setItem('_customFilter_projectPrefix', cachedPrefix || 'XXX')
   }
 
   const projectPrefix = cachedPrefix || 'XXX'
+
+  function debounce (fn, delay) {
+    let timerID = null
+    return function () {
+      const context = this
+      const args = arguments
+      if (timerID) {
+        clearTimeout(timerID)
+      }
+      timerID = setTimeout(function () {
+        fn.apply(context, args)
+      }, delay)
+    }
+  }
 
   function enhanceTask (document) {
     const target = $(document.querySelectorAll('.main-table td.c-actions'))
@@ -112,6 +126,57 @@
         $dropdown.removeClass('open')
       })
     })
+
+    // 已关闭的任务增强
+    enhanceKanBanClosedTaskWithCache(document)
+  }
+
+  const kanbanDatas = {}
+
+  function enhanceKanBanClosedTaskWithCache (document) {
+    const executionID = new URL(_window.location.href).searchParams.get('executionID')
+    if (kanbanDatas[executionID]) {
+      enhanceKanBanClosedTask(kanbanDatas[executionID], document)
+    } else {
+      debouncedEnhanceKanBanClosedTask(document)
+    }
+  }
+
+  const debouncedEnhanceKanBanClosedTask = debounce(queryKanbanAndEnhanceKanBanClosedTask, 100)
+
+  function queryKanbanAndEnhanceKanBanClosedTask (document) {
+    const executionID = new URL(_window.location.href).searchParams.get('executionID')
+    $.get(`${urlDomain}/index.php?m=execution&f=kanban&t=json&executionID=${executionID}`, function (res) {
+      const kanbanData = JSON.parse(JSON.parse(res).data)
+      kanbanDatas[executionID] = kanbanData
+      enhanceKanBanClosedTask(kanbanData, document)
+    })
+  }
+
+  function enhanceKanBanClosedTask (kanbanData, document) {
+    const kanbanTasksMap = getKanbanTasksMap(kanbanData)
+    const closedTasks = [...document.querySelectorAll('a.task-assignedTo,a.bug-assignedTo')].filter(a => a.text.trim() === 'Closed')
+    closedTasks.forEach(ct => {
+      const u = new URL(ct.href)
+      const taskID = u.searchParams.get('bugID') ? u.searchParams.get('bugID') : u.searchParams.get('taskID')
+      const kanbanTask = kanbanTasksMap[taskID]
+      const $span = $(ct).find('span')
+      $span.text(`Closed(${kanbanData.realnames[kanbanTask.resolvedBy]})`)
+      $span.css('max-width', '150px')
+    })
+
+    // 增强看板：增加角色过滤器
+    enhanceRoleFilter(document)
+  }
+
+  function getKanbanTasksMap (kanbanData) {
+    const kanbanTasks = Object.values(kanbanData.stories).map(a => a.tasks).filter(a => a).flatMap(a => Object.values(a)).flatMap(a => a)
+      .concat(Object.values(kanbanData.stories).map(a => a.bugs).filter(a => a).flatMap(a => Object.values(a)).flatMap(a => a))
+      .concat(Object.values(kanbanData.kanbanGroup).map(a => a.tasks).filter(a => a).flatMap(a => Object.values(a)).flatMap(a => a))
+      .concat(Object.values(kanbanData.kanbanGroup).map(a => a.bugs).filter(a => a).flatMap(a => Object.values(a)).flatMap(a => a))
+    const kanbanTasksMap = {}
+    kanbanTasks.forEach(task => kanbanTasksMap[task.id] = task)
+    return kanbanTasksMap
   }
 
   function enhanceDialog (mutationsList) {
