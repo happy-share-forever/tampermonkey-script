@@ -162,7 +162,7 @@
       const kanbanTask = kanbanTasksMap[taskID]
       const $span = $(ct).find('span')
       $span.text(`Closed(${kanbanData.realnames[kanbanTask.resolvedBy ? kanbanTask.resolvedBy : kanbanTask.finishedBy]})`)
-      $span.css('max-width', '150px')
+      $span.css('max-width', '100px')
     })
 
     // 增强看板：增加角色过滤器
