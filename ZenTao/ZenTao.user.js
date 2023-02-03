@@ -148,7 +148,6 @@
     const executionID = new URL(_window.location.href).searchParams.get('executionID')
     $.get(`${urlDomain}/index.php?m=execution&f=kanban&t=json&executionID=${executionID}`, function (res) {
       const kanbanData = JSON.parse(JSON.parse(res).data)
-      console.log(kanbanData)
       kanbanDatas[executionID] = kanbanData
       enhanceKanBanClosedTask(kanbanData, document)
     })
@@ -156,9 +155,9 @@
 
   function enhanceKanBanClosedTask (kanbanData, document) {
     const kanbanTasksMap = getKanbanTasksMap(kanbanData)
-    const closedTasks = [...document.querySelectorAll('a.task-assignedTo,a.bug-assignedTo')].filter(a => a.text.trim() === 'Closed')
+    const closedTasks = [...document.querySelectorAll('.task-assignedTo,.bug-assignedTo')].filter(a => a.textContent && a.textContent.trim() === 'Closed')
     closedTasks.forEach(ct => {
-      const u = new URL(ct.href)
+      const u = new URL(ct.parentElement.previousElementSibling.href)
       const taskID = u.searchParams.get('bugID') ? u.searchParams.get('bugID') : u.searchParams.get('taskID')
       const kanbanTask = kanbanTasksMap[taskID]
       const $span = $(ct).find('span')
