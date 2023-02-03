@@ -236,7 +236,7 @@
         $item.css('display', 'block')
       } else {
         const name = $($item.find('.task-assignedTo,.bug-assignedTo').children()[1]).text().trim()
-        if (name !== checkedName) {
+        if (!name.includes(checkedName)) {
           $item.css('display', 'none')
         } else {
           $item.css('display', 'block')
@@ -262,6 +262,7 @@
   }
 
   const ALL_TEXT = '全部'
+  const CN_REG = /[^\x00-\xff]+/gm // 过滤中文字符的正则
 
   function enhanceRoleFilter (doc) {
     if (!window.location.search.includes('kanban')) return
@@ -271,7 +272,10 @@
     }
     const btnList = []
     $(doc.querySelectorAll('.task-assignedTo,.bug-assignedTo')).each(function () {
-      const name = $(this).text().trim()
+      const ssignedTo = $(this).text().trim()
+      const matches = ssignedTo.match(CN_REG)
+      if (!matches) return
+      const name = matches[0]
       if (!btnList.includes(name)) btnList.push(name)
     })
     btnList.sort()
@@ -349,13 +353,11 @@
       const doc = executionIframe.contentWindow.document
       enhanceTask(doc)
       enhanceKanBan(doc)
-      enhanceRoleFilter(doc)
       enhanceHistoryList(doc)
       const observer = new MutationObserver((mutationsList) => {
         enhanceTask(doc)
         enhanceKanBan(doc)
         enhanceDialog(mutationsList)
-        enhanceRoleFilter(doc)
         enhanceHistoryList(doc)
       })
       observer.observe(doc.body, {
