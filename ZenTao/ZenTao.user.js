@@ -161,7 +161,7 @@
       const taskID = u.searchParams.get('bugID') ? u.searchParams.get('bugID') : u.searchParams.get('taskID')
       const kanbanTask = kanbanTasksMap[taskID]
       const $span = $(ct).find('span')
-      $span.text(`Closed(${kanbanData.realnames[kanbanTask.resolvedBy ? kanbanTask.resolvedBy : kanbanTask.finishedBy]})`)
+      $span.text(`Closed(${kanbanData.realnames[kanbanTask.resolvedBy || kanbanTask.finishedBy || kanbanTask.canceledBy || kanbanTask.closedBy]})`)
       $span.css('max-width', '100px')
     })
 
