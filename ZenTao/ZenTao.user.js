@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.2
+// @version      2.3
 // @description  ZenTao style and function enhancement
 // @author       happy share org
 // @include      /^https:\/\/zentao.*$/
@@ -227,18 +227,18 @@
 
   function hiddenBoardItemWithPrimaryBtn (doc) {
     const $btn = $(doc).find('.btn.custom-filter-btn.btn-primary')
-    const checkedName = $btn.text().trim()
+    const btnArr = $.makeArray($btn)
     const allBoardList = $(doc.querySelectorAll('.board-item'))
     allBoardList.each(function () {
       const $item = $(this)
-      if (checkedName === ALL_TEXT || !checkedName) {
+      if (isAllText(btnArr) ) {
         $item.css('display', 'block')
       } else {
         const name = $($item.find('.task-assignedTo,.bug-assignedTo').children()[1]).text().trim()
-        if (!name.includes(checkedName)) {
-          $item.css('display', 'none')
+        if (btnArr.every(b => name.includes($(b).text().trim()))) {
+          $item.css('display', 'block');
         } else {
-          $item.css('display', 'block')
+          $item.css('display', 'none');
         }
       }
     })
@@ -252,7 +252,7 @@
           hasTask = true
         }
       })
-      if (!hasTask && checkedName !== ALL_TEXT && checkedName) {
+      if (!hasTask && btnArr && !isAllText(btnArr)) {
         $tr.css('display', 'none')
       } else {
         $tr.css('display', 'table-row')
@@ -260,8 +260,19 @@
     })
   }
 
+  function isAllText (btnArr) {
+    return btnArr.some(b => !$(b).text().trim() || $(b).text().trim() === ALL_TEXT);
+  }
+
   const ALL_TEXT = '全部'
   const CN_REG = /[^\x00-\xff]+/gm // 过滤中文字符的正则
+
+  class Button {
+    constructor (name, exclusiveList) {
+      this.name = name
+      this.exclusiveList = exclusiveList
+    }
+  }
 
   function enhanceRoleFilter (doc) {
     if (!window.location.search.includes('kanban')) return
@@ -275,43 +286,47 @@
       const matches = ssignedTo.match(CN_REG)
       if (!matches) return
       const name = matches[0]
-      if (!btnList.includes(name)) btnList.push(name)
+      if (!btnList.map(b => b.name).includes(name)) btnList.push(new Button(name, [0]))
     })
     btnList.sort()
-    btnList.unshift(ALL_TEXT)
+    btnList.unshift(new Button('Closed', [1]))
+    btnList.unshift(new Button(ALL_TEXT, [0, 1]))
 
+    const $mainMenu = $(doc.querySelector('#mainMenu'))
     btnList.forEach(i => {
-      const $mainMenu = $(doc.querySelector('#mainMenu'))
       const $btn = $(doc.createElement('a'))
       $btn.addClass('btn custom-filter-btn')
       $btn.css('margin-right', '10px')
-      $btn.html(i)
+      $btn.html(i.name)
       $btn.on('click', function () {
-        let checkedName
         const isChecked = $btn.hasClass('btn-primary')
-        if (!isChecked) {
-          $btn.addClass('btn-primary').siblings().removeClass('btn-primary')
-          checkedName = $btn.text().trim()
-        } else {
+        if (isChecked) {
           $btn.removeClass('btn-primary')
-          checkedName = ''
+        } else {
+          $.makeArray($btn.addClass('btn-primary').siblings('a'))
+            .filter(e => btnList.find(b => b.name === $(e).text()).exclusiveList.filter(v => i.exclusiveList.includes(v)).length > 0)
+            .forEach(e => $(e).removeClass('btn-primary'))
         }
-        _window.localStorage.setItem('_customerFilter_name', checkedName)
+        const checkedNames = $.makeArray($(doc).find('.btn-primary')).map(e => e.text)
+        console.log(checkedNames)
+        _window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames))
         hiddenBoardItemWithPrimaryBtn(doc)
       })
       $btn.appendTo($mainMenu)
     })
-    const checkedName = _window.localStorage.getItem('_customerFilter_name')
-    if (checkedName) {
-      if (!btnList.includes(checkedName)) {
+    const checkedNames = JSON.parse(_window.localStorage.getItem('_customerFilter_name'))
+    if (checkedNames && checkedNames.length > 0) {
+      if (!checkedNames.every(c => btnList.map(b => b.name).includes(c))) {
         _window.localStorage.setItem('_customerFilter_name', '')
         return
       }
       $(doc).find('.btn.custom-filter-btn').each((index, item) => {
         const $item = $(item)
-        if ($item.text().trim() === checkedName) {
-          $item.click()
-        }
+        checkedNames.forEach(c => {
+          if ($item.text().trim() === c) {
+            $item.click()
+          }
+        })
       })
     }
   }
