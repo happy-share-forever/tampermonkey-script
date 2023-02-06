@@ -234,18 +234,18 @@
         $item.css('display', 'block')
       } else {
         const assignedTo = $($item.find('.task-assignedTo,.bug-assignedTo').children()[1]).text().trim()
-        const isNotClosed = roleFilterBtnArr.map(e => $(e).text().trim()).includes(NOT_CLOSED);
-        const roleFilterBtnArr2 = isNotClosed ? roleFilterBtnArr.filter(e => $(e).text().trim() !== NOT_CLOSED) : roleFilterBtnArr
-        const isDisplay = roleFilterBtnArr2.every(b => {
-          if (isNotClosed) {
-            return !assignedTo.includes('Closed') && assignedTo.includes($(b).text().trim())
-          }
+        const isNotClosed = roleFilterBtnArr.map(e => $(e).text().trim()).includes(NOT_CLOSED)
+        const roles = isNotClosed ? roleFilterBtnArr.filter(e => $(e).text().trim() !== NOT_CLOSED) : roleFilterBtnArr
+        let isDisplay = roles.every(b => {
           return assignedTo.includes($(b).text().trim())
-        });
+        })
+        if (isDisplay && isNotClosed) {
+          isDisplay = !assignedTo.includes('Closed')
+        }
         if (isDisplay) {
           $item.css('display', 'block');
         } else {
-          $item.css('display', 'none')
+          $item.css('display', 'none');
         }
       }
     })
