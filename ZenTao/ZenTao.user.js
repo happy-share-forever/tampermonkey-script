@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.4
+// @version      2.5
 // @description  ZenTao style and function enhancement
 // @author       happy share org
 // @include      /^https:\/\/zentao.*$/
