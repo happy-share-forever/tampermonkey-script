@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.3
+// @version      2.4
 // @description  ZenTao style and function enhancement
 // @author       happy share org
 // @include      /^https:\/\/zentao.*$/
@@ -226,19 +226,26 @@
   }
 
   function hiddenBoardItemWithPrimaryBtn (doc) {
-    const $btn = $(doc).find('.btn.custom-filter-btn.btn-primary')
-    const btnArr = $.makeArray($btn)
+    const roleFilterBtnArr = $.makeArray($(doc).find('.btn.custom-filter-btn.btn-primary'))
     const allBoardList = $(doc.querySelectorAll('.board-item'))
     allBoardList.each(function () {
       const $item = $(this)
-      if (isAllText(btnArr) ) {
+      if (isAllText(roleFilterBtnArr)) {
         $item.css('display', 'block')
       } else {
-        const name = $($item.find('.task-assignedTo,.bug-assignedTo').children()[1]).text().trim()
-        if (btnArr.every(b => name.includes($(b).text().trim()))) {
+        const assignedTo = $($item.find('.task-assignedTo,.bug-assignedTo').children()[1]).text().trim()
+        const isNotClosed = roleFilterBtnArr.map(e => $(e).text().trim()).includes(NOT_CLOSED);
+        const roleFilterBtnArr2 = isNotClosed ? roleFilterBtnArr.filter(e => $(e).text().trim() !== NOT_CLOSED) : roleFilterBtnArr
+        const isDisplay = roleFilterBtnArr2.every(b => {
+          if (isNotClosed) {
+            return !assignedTo.includes('Closed') && assignedTo.includes($(b).text().trim())
+          }
+          return assignedTo.includes($(b).text().trim())
+        });
+        if (isDisplay) {
           $item.css('display', 'block');
         } else {
-          $item.css('display', 'none');
+          $item.css('display', 'none')
         }
       }
     })
@@ -252,7 +259,7 @@
           hasTask = true
         }
       })
-      if (!hasTask && btnArr && !isAllText(btnArr)) {
+      if (!hasTask && roleFilterBtnArr.length && !isAllText(roleFilterBtnArr)) {
         $tr.css('display', 'none')
       } else {
         $tr.css('display', 'table-row')
@@ -261,10 +268,14 @@
   }
 
   function isAllText (btnArr) {
-    return btnArr.some(b => !$(b).text().trim() || $(b).text().trim() === ALL_TEXT);
+    return btnArr.some(b => {
+      const trim = $(b).text().trim()
+      return !trim || trim === ALL_TEXT
+    })
   }
 
   const ALL_TEXT = '全部'
+  const NOT_CLOSED = '未关闭'
   const CN_REG = /[^\x00-\xff]+/gm // 过滤中文字符的正则
 
   class Button {
@@ -289,13 +300,16 @@
       if (!btnList.map(b => b.name).includes(name)) btnList.push(new Button(name, [0]))
     })
     btnList.sort()
-    btnList.unshift(new Button('Closed', [1]))
+    btnList.unshift(new Button(NOT_CLOSED, [1]))
     btnList.unshift(new Button(ALL_TEXT, [0, 1]))
 
     const $mainMenu = $(doc.querySelector('#mainMenu'))
     btnList.forEach(i => {
       const $btn = $(doc.createElement('a'))
       $btn.addClass('btn custom-filter-btn')
+      if (i.name.includes(ALL_TEXT)) {
+        $btn.addClass('all-button')
+      }
       $btn.css('margin-right', '10px')
       $btn.html(i.name)
       $btn.on('click', function () {
@@ -307,9 +321,12 @@
             .filter(e => btnList.find(b => b.name === $(e).text()).exclusiveList.filter(v => i.exclusiveList.includes(v)).length > 0)
             .forEach(e => $(e).removeClass('btn-primary'))
         }
-        const checkedNames = $.makeArray($(doc).find('.btn-primary')).map(e => e.text)
-        console.log(checkedNames)
-        _window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames))
+        const checkedNames = $.makeArray($(doc).find('.btn-primary.custom-filter-btn')).map(e => e.text)
+        if (!checkedNames || !checkedNames.length) {
+          // 如果没选中任何条件，则默认选中“全部”
+          $(doc).find('.all-button').click()
+        }
+        _window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames));
         hiddenBoardItemWithPrimaryBtn(doc)
       })
       $btn.appendTo($mainMenu)
