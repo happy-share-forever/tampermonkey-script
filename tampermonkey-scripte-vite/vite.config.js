@@ -13,7 +13,6 @@ export default defineConfig({
         namespace: 'https://iin.ink',
         version: 2.5,
         include: /^https:\/\/zentao.*$/,
-        grant: ['GM_addStyle', 'GM_setClipboard'],
       },
       build: {
         externalGlobals: {

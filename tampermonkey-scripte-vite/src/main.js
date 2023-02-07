@@ -1,7 +1,9 @@
 import {createApp} from 'vue';
 import './style.css';
 import App from './App.vue'
-import {debounce} from './util.js'
+import {debounce} from './util'
+import {enhanceTask} from './enhance-task'
+import {enhanceDialog, enhanceHistoryList} from './enhance-dialog'
 
 createApp(App).mount(
   (() => {
@@ -17,41 +19,6 @@ createApp(App).mount(
 
     const projectPrefix = cachedPrefix || 'XXX'
 
-    function enhanceTask (document) {
-      const target = $(document.querySelectorAll('.main-table td.c-actions'))
-      if (target.find('span:contains("copy:")').length > 0) return
-      target.each(function () {
-        const $el = $(this).parent()
-        const taskId = $el.attr('data-id') || $el.find('.cell-id').find('a').text()
-        const $text = $('<span>copy:</span>')
-        $text.appendTo($el.find('.c-actions'))
-        const $copyId = $(document.createElement('a'))
-        $copyId.html('<span class="text"> 分支</span>')
-        $copyId.on('click', function () {
-          GM_setClipboard(`feature/${projectPrefix}-${taskId}`, { type: 'text', mimetype: 'text/plain' })
-        })
-        $copyId.appendTo($el.find('.c-actions'))
-
-        // 复制标题
-        const $copyTitle = $(document.createElement('a'))
-        $copyTitle.html('<span class="text"> 标题</span>')
-        $copyTitle.on('click', function () {
-          let title = window.location.search.includes('f=bug')
-            ? $($el.children()[3]).attr('title')
-            : $(document).find(`tr[data-id=${taskId}]`).find('.c-name').attr('title')
-          GM_setClipboard(`${projectPrefix}-${taskId} ${title}`, { type: 'text', mimetype: 'text/plain' })
-        })
-        $copyTitle.appendTo($el.find('.c-actions'))
-
-        // 复制链接
-        const $copyLink = $(document.createElement('a'))
-        $copyLink.html('<span class="text"> 链接</span>')
-        $copyLink.on('click', function () {
-          GM_setClipboard(`${urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' })
-        })
-        $copyLink.appendTo($el.find('.c-actions'))
-      })
-    }
 
     function enhanceKanBan (document) {
       const target = $(document.querySelectorAll('.board-story'))
@@ -147,51 +114,6 @@ createApp(App).mount(
       return kanbanTasksMap
     }
 
-    function enhanceDialog (mutationsList) {
-      mutationsList.forEach(item => {
-        if (item.addedNodes.length > 0) {
-          const firstChild = $(item.addedNodes[0])
-          if (firstChild.attr('id') === 'iframe-triggerModal') {
-            // 任务详情弹窗
-            firstChild.off('load').on('load', function () {
-              const doc = firstChild[0].contentWindow.document
-              enhanceHistoryList(doc)
-              const toolbar = $(doc.querySelector('.main-actions > .btn-toolbar'))
-
-              // 复制分支
-              const $copyId = $(document.createElement('a'))
-              $copyId.addClass('btn btn-link showinonlybody')
-              $copyId.html('<span class="text"></span> 复制分支')
-              const taskId = $(doc.querySelector('.page-title > span.label-id')).text()
-              $copyId.on('click', function () {
-                GM_setClipboard(`feature/${projectPrefix}-${taskId}`, { type: 'text', mimetype: 'text/plain' })
-              })
-              $copyId.appendTo(toolbar)
-
-              // 复制标题
-              const $copyTitle = $(document.createElement('a'))
-              $copyTitle.addClass('btn btn-link showinonlybody')
-              $copyTitle.html('<span class="text"></span> 复制标题')
-              $copyTitle.on('click', function () {
-                const title = $(doc.querySelector('.page-title > span.text')).attr('title')
-                GM_setClipboard(`${projectPrefix}-${taskId} ${title}`, { type: 'text', mimetype: 'text/plain' })
-              })
-              $copyTitle.appendTo(toolbar)
-
-              // 复制链接
-              const $copyLink = $(document.createElement('a'))
-              $copyLink.addClass('btn btn-link showinonlybody')
-              $copyLink.html('<span class="text"></span> 复制链接')
-              $copyLink.on('click', function () {
-                GM_setClipboard(`${urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' })
-              })
-              $copyLink.appendTo(toolbar)
-
-            })
-          }
-        }
-      })
-    }
 
     function hiddenBoardItemWithPrimaryBtn (doc) {
       const roleFilterBtnArr = $.makeArray($(doc).find('.btn.custom-filter-btn.btn-primary'))
@@ -316,47 +238,18 @@ createApp(App).mount(
       }
     }
 
-    // 历史记录只展示备注
-    function enhanceHistoryList (doc) {
-      if (doc.querySelectorAll('.histories-custom-filter-btn').length) return
-      const fn = function (type) {
-        $(doc.querySelectorAll('.histories-list li')).each(function () {
-          const $this = $(this)
-          if (type === 'hide' && $this.text().indexOf('备注') === -1) {
-            $this.hide()
-          } else {
-            $this.show()
-          }
-        })
-      }
-      const $titleBox = $(doc.querySelector('.histories .detail-title'))
-      const $hideBtn = $(doc.createElement('a'))
-      $hideBtn.addClass('btn btn-link pull-right histories-custom-filter-btn')
-      $hideBtn.html('只看备注')
-      $hideBtn.on('click', function () {
-        if ($hideBtn.html() === '只看备注') {
-          fn('hide')
-          $hideBtn.html('查看全部')
-        } else {
-          fn('show')
-          $hideBtn.html('只看备注')
-        }
-      })
-      $hideBtn.appendTo($titleBox)
-    }
-
     // 任务弹窗关闭后 iframe 重新 reload了，所以需要监听
     const executionIframe = document.querySelector('#appIframe-execution')
     if (executionIframe) {
       executionIframe.onload = function () {
         const doc = executionIframe.contentWindow.document
-        enhanceTask(doc)
+        enhanceTask(doc, projectPrefix, urlDomain)
         enhanceKanBan(doc)
         enhanceHistoryList(doc)
         const observer = new MutationObserver((mutationsList) => {
-          enhanceTask(doc)
+          enhanceTask(doc, projectPrefix, urlDomain)
           enhanceKanBan(doc)
-          enhanceDialog(mutationsList)
+          enhanceDialog(mutationsList, projectPrefix, urlDomain)
           enhanceHistoryList(doc)
         })
         observer.observe(doc.body, {
