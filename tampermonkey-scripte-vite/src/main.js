@@ -1,11 +1,12 @@
-import { createApp } from 'vue';
+import {createApp} from 'vue';
 import './style.css';
-import App from './App.vue';
+import App from './App.vue'
+import {debounce} from './util.js'
 
 createApp(App).mount(
   (() => {
-    const app = document.createElement('div');
-    // document.body.append(app);
+    const app = document.createElement('div')
+    // document.body.append(app)
     const _window = window
     const urlDomain = location.origin
     let cachedPrefix = _window.localStorage.getItem('_customFilter_projectPrefix')
@@ -15,20 +16,6 @@ createApp(App).mount(
     }
 
     const projectPrefix = cachedPrefix || 'XXX'
-
-    function debounce (fn, delay) {
-      let timerID = null
-      return function () {
-        const context = this
-        const args = arguments
-        if (timerID) {
-          clearTimeout(timerID)
-        }
-        timerID = setTimeout(function () {
-          fn.apply(context, args)
-        }, delay)
-      }
-    }
 
     function enhanceTask (document) {
       const target = $(document.querySelectorAll('.main-table td.c-actions'))
@@ -224,9 +211,9 @@ createApp(App).mount(
             isDisplay = !assignedTo.includes('Closed')
           }
           if (isDisplay) {
-            $item.css('display', 'block');
+            $item.css('display', 'block')
           } else {
-            $item.css('display', 'none');
+            $item.css('display', 'none')
           }
         }
       })
@@ -307,7 +294,7 @@ createApp(App).mount(
             // 如果没选中任何条件，则默认选中“全部”
             $(doc).find('.all-button').click()
           }
-          _window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames));
+          _window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames))
           hiddenBoardItemWithPrimaryBtn(doc)
         })
         $btn.appendTo($mainMenu)
@@ -378,6 +365,6 @@ createApp(App).mount(
         })
       }
     }
-    return app;
+    return app
   })(),
-);
+)
