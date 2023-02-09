@@ -21,10 +21,13 @@
   GM_addStyle('.m-execution-task .main-table .c-actions-5 { width: 300px !important; text-align: left; }')
   GM_addStyle('.m-execution-task .chosen-container .chosen-drop { right: 0; }')
   GM_addStyle('.m-execution-task .table-datatable { min-width: unset !important; }')
-  GM_addStyle('.m-execution-task .board-item > .title { max-height: unset !important; -webkit-line-clamp: unset !important; -webkit-box-orient: unset !important; font-size: 15px !important; }')
-  GM_addStyle('.m-execution-task #kanban .group-title { line-height: 20px !important; font-size: 15px !important; }')
-  GM_addStyle('.m-execution-task .histories-custom-filter-btn { margin-right: 8px }')
-  // 根据需要修改分支前缀
+
+  // 看板
+  GM_addStyle('.m-execution-kanban .board-item > .title { max-height: unset !important; -webkit-line-clamp: unset !important; -webkit-box-orient: unset !important; font-size: 15px !important; }')
+  GM_addStyle('.m-execution-kanban #kanban .group-title { line-height: 20px !important; font-size: 15px !important; }')
+
+  // 弹出层，只看备注按钮
+  GM_addStyle('.histories-custom-filter-btn { margin-right: 8px }')
 
   const _window = window
   const urlDomain = location.origin
