@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.6
+// @version      2.7
 // @description  ZenTao style and function enhancement
 // @author       happy share org
 // @include      /^https:\/\/zentao.*$/
@@ -382,6 +382,7 @@
   const executionIframe = document.querySelector('#appIframe-execution')
   if (executionIframe) {
     executionIframe.onload = function () {
+      setTimeout(() => executionIframe.contentWindow.dispatchEvent(new Event('resize')), 500)
       const doc = executionIframe.contentWindow.document
       enhanceTask(doc)
       enhanceKanBan(doc)
