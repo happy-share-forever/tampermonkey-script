@@ -21,10 +21,13 @@
   GM_addStyle('.m-execution-task .main-table .c-actions-5 { width: 300px !important; text-align: left; }')
   GM_addStyle('.m-execution-task .chosen-container .chosen-drop { right: 0; }')
   GM_addStyle('.m-execution-task .table-datatable { min-width: unset !important; }')
-  GM_addStyle('.m-execution-task .board-item > .title { max-height: unset !important; -webkit-line-clamp: unset !important; -webkit-box-orient: unset !important; font-size: 15px !important; }')
-  GM_addStyle('.m-execution-task #kanban .group-title { line-height: 20px !important; font-size: 15px !important; }')
-  GM_addStyle('.m-execution-task .histories-custom-filter-btn { margin-right: 8px }')
-  // 根据需要修改分支前缀
+
+  // 看板
+  GM_addStyle('.m-execution-kanban .board-item > .title { max-height: unset !important; -webkit-line-clamp: unset !important; -webkit-box-orient: unset !important; font-size: 15px !important; }')
+  GM_addStyle('.m-execution-kanban #kanban .group-title { line-height: 20px !important; font-size: 15px !important; }')
+
+  // 弹出层，只看备注按钮
+  GM_addStyle('.histories-custom-filter-btn { margin-right: 8px }')
 
   const _window = window
   const urlDomain = location.origin
@@ -132,12 +135,12 @@
     enhanceKanBanClosedTaskWithCache(document)
   }
 
-  const kanbanDatas = {}
+  const kanbanDataCache = {}
 
   function enhanceKanBanClosedTaskWithCache (document) {
     const executionID = new URL(_window.location.href).searchParams.get('executionID')
-    if (kanbanDatas[executionID]) {
-      enhanceKanBanClosedTask(kanbanDatas[executionID], document)
+    if (kanbanDataCache[executionID]) {
+      enhanceKanBanClosedTask(kanbanDataCache[executionID], document)
     } else {
       debouncedEnhanceKanBanClosedTask(document)
     }
@@ -149,22 +152,25 @@
     const executionID = new URL(_window.location.href).searchParams.get('executionID')
     $.get(`${urlDomain}/index.php?m=execution&f=kanban&t=json&executionID=${executionID}`, function (res) {
       const kanbanData = JSON.parse(JSON.parse(res).data)
-      kanbanDatas[executionID] = kanbanData
+      kanbanDataCache[executionID] = kanbanData
       enhanceKanBanClosedTask(kanbanData, document)
     })
   }
 
   function enhanceKanBanClosedTask (kanbanData, document) {
     const kanbanTasksMap = getKanbanTasksMap(kanbanData)
-    const closedTasks = [...document.querySelectorAll('.task-assignedTo,.bug-assignedTo')].filter(a => a.textContent && a.textContent.trim() === 'Closed')
-    closedTasks.forEach(ct => {
-      const u = new URL(ct.parentElement.previousElementSibling.href)
+    const closedTasksMap = getKanbanClosedTaskMap(kanbanTasksMap);
+    const tasksDom = [...document.querySelectorAll('.task-assignedTo,.bug-assignedTo')]
+    for (const taskDom of tasksDom) {
+      const u = new URL(taskDom.parentElement.previousElementSibling.href)
       const taskID = u.searchParams.get('bugID') ? u.searchParams.get('bugID') : u.searchParams.get('taskID')
+      if (!closedTasksMap[taskID]) continue
       const kanbanTask = kanbanTasksMap[taskID]
-      const $span = $(ct).find('span')
-      $span.text(`Closed(${kanbanData.realnames[kanbanTask.resolvedBy || kanbanTask.finishedBy || kanbanTask.canceledBy || kanbanTask.closedBy]})`)
+      const $span = $(taskDom).find('span')
+      const closerName = kanbanData.realnames[kanbanTask.closedBy];
+      $span.text(`Closed(${closerName})`)
       $span.css('max-width', '100px')
-    })
+    }
 
     // 增强看板：增加角色过滤器
     enhanceRoleFilter(document)
@@ -178,6 +184,13 @@
     const kanbanTasksMap = {}
     kanbanTasks.forEach(task => kanbanTasksMap[task.id] = task)
     return kanbanTasksMap
+  }
+
+  function getKanbanClosedTaskMap (kanbanTasksMap) {
+    const closedTasks = Object.values(kanbanTasksMap).filter(a => a.status && a.status === 'closed')
+    const closedTasksMap = {}
+    closedTasks.forEach(task => closedTasksMap[task.id] = task)
+    return closedTasksMap;
   }
 
   function enhanceDialog (mutationsList) {
