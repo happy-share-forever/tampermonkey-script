@@ -2,10 +2,10 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.9
+// @version      2.10
 // @description  ZenTao style and function enhancement
-// @author
-// @include      /^https:\/\/.*zentao.*$/
+// @author       happy share forever core team
+// @include      /^https:\/\/zentao.*$/
 // @grant        GM_addStyle
 // @grant        GM_setClipboard
 // ==/UserScript==
@@ -31,6 +31,123 @@
   // 弹出层，只看备注按钮
   GM_addStyle('.histories-custom-filter-btn { margin-right: 8px }');
 
+  const _window = window;
+  let cachedPrefix = _window.localStorage.getItem('_customFilter_projectPrefix');
+  if (!cachedPrefix) {
+    cachedPrefix = _window.prompt('请补全项目代号，之后可以通过 localStorage _customFilter_projectPrefix 来修改。', 'XXX');
+    _window.localStorage.setItem('_customFilter_projectPrefix', cachedPrefix || 'XXX');
+  }
+
+  const projectPrefix = cachedPrefix || 'XXX';
+
+  class Context {
+    executionIframe
+    tW
+    projectPrefix
+
+    constructor ({ executionIframe }) {
+      this.executionIframe = executionIframe;
+      this.tW = _window;
+      this.projectPrefix = projectPrefix;
+    }
+
+    get window () {
+      return this.executionIframe.contentWindow
+    }
+
+    get urlDomain () {
+      return this.tW.location.origin
+    }
+
+    get _window () {
+      return this.tW
+    }
+
+    get document () {
+      return this.executionIframe.contentWindow.document
+    }
+
+    static of (executionIframe) {
+      return new Context({
+        executionIframe
+      })
+    }
+  }
+
+  /**
+   * 历史记录只展示备注
+   * @param {Context} ctx
+   */
+  function enhanceHistoryList (ctx) {
+    const doc = ctx.document;
+    if (doc.querySelectorAll('.histories-custom-filter-btn').length) return
+    const fn = function (type) {
+      $(doc.querySelectorAll('.histories-list li')).each(function () {
+        const $this = $(this);
+        if (type === 'hide' && $this.text().indexOf('备注') === -1) {
+          $this.hide();
+        } else {
+          $this.show();
+        }
+      });
+    };
+    const $titleBox = $(doc.querySelector('.histories .detail-title'));
+    const $hideBtn = $(doc.createElement('a'));
+    $hideBtn.addClass('btn btn-link pull-right histories-custom-filter-btn');
+    $hideBtn.html('只看备注');
+    $hideBtn.on('click', function () {
+      if ($hideBtn.html() === '只看备注') {
+        fn('hide');
+        $hideBtn.html('查看全部');
+      } else {
+        fn('show');
+        $hideBtn.html('只看备注');
+      }
+    });
+    $hideBtn.appendTo($titleBox);
+  }
+
+  function enhanceTask (ctx) {
+    const document = ctx.document;
+    const target = $(document.querySelectorAll('.main-table td.c-actions'));
+    if (target.find('span:contains("copy:")').length > 0) return
+    target.each(function () {
+      const $el = $(this).parent();
+      const taskId = $el.attr('data-id') || $el.find('.cell-id').find('a').text();
+      const $text = $('<span>copy:</span>');
+      $text.appendTo($el.find('.c-actions'));
+      const $copyId = $(document.createElement('a'));
+      $copyId.html('<span class="text"> 分支</span>');
+      $copyId.on('click', function () {
+        GM_setClipboard(`feature/${ctx.projectPrefix}-${taskId}`, { type: 'text', mimetype: 'text/plain' });
+      });
+      $copyId.appendTo($el.find('.c-actions'));
+
+      // 复制标题
+      const $copyTitle = $(document.createElement('a'));
+      $copyTitle.html('<span class="text"> 标题</span>');
+      $copyTitle.on('click', function () {
+        let title = window.location.search.includes('f=bug')
+          ? $($el.children()[3]).attr('title')
+          : $(document).find(`tr[data-id=${taskId}]`).find('.c-name').attr('title');
+        GM_setClipboard(`${ctx.projectPrefix}-${taskId} ${title}`, { type: 'text', mimetype: 'text/plain' });
+      });
+      $copyTitle.appendTo($el.find('.c-actions'));
+
+      // 复制链接
+      const $copyLink = $(document.createElement('a'));
+      $copyLink.html('<span class="text"> 链接</span>');
+      $copyLink.on('click', function () {
+        GM_setClipboard(`${ctx.urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
+      });
+      $copyLink.appendTo($el.find('.c-actions'));
+    });
+  }
+
+  const ALL_TEXT = '全部';
+  const NOT_CLOSED = '未关闭';
+  const CN_REG = /[^\x00-\xff]+/gm; // 过滤中文字符的正则
+
   function debounce (fn, delay) {
     let timerID = null;
     return function () {
@@ -45,62 +162,23 @@
     }
   }
 
-  const _window = window;
-  const urlDomain = location.origin;
-  let cachedPrefix = _window.localStorage.getItem('_customFilter_projectPrefix');
-  if (!cachedPrefix) {
-    cachedPrefix = _window.prompt('请补全项目代号，之后可以通过 localStorage _customFilter_projectPrefix 来修改。', 'XXX');
-    _window.localStorage.setItem('_customFilter_projectPrefix', cachedPrefix || 'XXX');
+  function isAllText (btnArr) {
+    return btnArr.some(b => {
+      const trim = $(b).text().trim();
+      return !trim || trim === ALL_TEXT
+    })
   }
 
-  const projectPrefix = cachedPrefix || 'XXX';
-
-  function enhanceTask (document) {
-    const target = $(document.querySelectorAll('.main-table td.c-actions'));
-    if (target.find('span:contains("copy:")').length > 0) return
-    target.each(function () {
-      const $el = $(this).parent();
-      const taskId = $el.attr('data-id') || $el.find('.cell-id').find('a').text();
-      const $text = $('<span>copy:</span>');
-      $text.appendTo($el.find('.c-actions'));
-      const $copyId = $(document.createElement('a'));
-      $copyId.html('<span class="text"> 分支</span>');
-      $copyId.on('click', function () {
-        GM_setClipboard(`feature/${projectPrefix}-${taskId}`, { type: 'text', mimetype: 'text/plain' });
-      });
-      $copyId.appendTo($el.find('.c-actions'));
-
-      // 复制标题
-      const $copyTitle = $(document.createElement('a'));
-      $copyTitle.html('<span class="text"> 标题</span>');
-      $copyTitle.on('click', function () {
-        let title = window.location.search.includes('f=bug')
-          ? $($el.children()[3]).attr('title')
-          : $(document).find(`tr[data-id=${taskId}]`).find('.c-name').attr('title');
-        GM_setClipboard(`${projectPrefix}-${taskId} ${title}`, { type: 'text', mimetype: 'text/plain' });
-      });
-      $copyTitle.appendTo($el.find('.c-actions'));
-
-      // 复制链接
-      const $copyLink = $(document.createElement('a'));
-      $copyLink.html('<span class="text"> 链接</span>');
-      $copyLink.on('click', function () {
-        GM_setClipboard(`${urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
-      });
-      $copyLink.appendTo($el.find('.c-actions'));
-    });
+  class Button {
+    constructor (name, exclusiveList) {
+      this.name = name;
+      this.exclusiveList = exclusiveList;
+    }
   }
 
-  function enhanceKanBan (document) {
-    const target = $(document.querySelectorAll('.board-story'));
-    // 已经添加过了
-    if (target.find('a:contains("复制分支")').length > 0) return
-    enhanceKanBanStory(target, document);
-    enhanceKanBanTask(document);
-    enhanceKanBanClosedTaskWithCache(document);
-  }
-
-  function enhanceKanBanStory (target, document) {
+  function enhanceKanBanStory (target, ctx) {
+    const projectPrefix = ctx.projectPrefix;
+    const document = ctx.document;
     target.each(function () {
       const $el = $(this);
       const $ul = $el.find('ul');
@@ -139,57 +217,16 @@
     });
   }
 
-  function enhanceKanBanTask (document) {
-    const taskInfos = [...document.querySelectorAll('.info')];
+  function enhanceKanBanTask (ctx) {
+    const taskInfos = [...ctx.document.querySelectorAll('.info')];
     for (const taskInfo of taskInfos) {
       const $taskInfo = $(taskInfo);
       const id = $taskInfo.parent().attr('data-id');
-      const $no = $(document.createElement('a'));
+      const $no = $(ctx.document.createElement('a'));
       $no.text('#' + id);
       $no.addClass('small');
       $taskInfo.prepend($no);
     }
-  }
-
-  const kanbanDataCache = {};
-
-  function enhanceKanBanClosedTaskWithCache (document) {
-    const executionID = new URL(_window.location.href).searchParams.get('executionID');
-    if (kanbanDataCache[executionID]) {
-      enhanceKanBanClosedTask(kanbanDataCache[executionID], document);
-    } else {
-      debouncedEnhanceKanBanClosedTask(document);
-    }
-  }
-
-  const debouncedEnhanceKanBanClosedTask = debounce(queryKanbanAndEnhanceKanBanClosedTask, 100);
-
-  function queryKanbanAndEnhanceKanBanClosedTask (document) {
-    const executionID = new URL(_window.location.href).searchParams.get('executionID');
-    $.get(`${urlDomain}/index.php?m=execution&f=kanban&t=json&executionID=${executionID}`, function (res) {
-      const kanbanData = JSON.parse(JSON.parse(res).data);
-      kanbanDataCache[executionID] = kanbanData;
-      enhanceKanBanClosedTask(kanbanData, document);
-    });
-  }
-
-  function enhanceKanBanClosedTask (kanbanData, document) {
-    const kanbanTasksMap = getKanbanTasksMap(kanbanData);
-    const closedTasksMap = getKanbanClosedTaskMap(kanbanTasksMap);
-    const tasksDom = [...document.querySelectorAll('.task-assignedTo,.bug-assignedTo')];
-    for (const taskDom of tasksDom) {
-      const u = new URL(taskDom.parentElement.previousElementSibling.href);
-      const taskID = u.searchParams.get('bugID') ? u.searchParams.get('bugID') : u.searchParams.get('taskID');
-      if (!closedTasksMap[taskID]) continue
-      const kanbanTask = kanbanTasksMap[taskID];
-      const $span = $(taskDom).find('span');
-      const closerName = kanbanData.realnames[kanbanTask.closedBy];
-      $span.text(`Closed(${closerName})`);
-      $span.css('max-width', '100px');
-    }
-
-    // 增强看板：增加角色过滤器
-    enhanceRoleFilter(document);
   }
 
   function getKanbanTasksMap (kanbanData) {
@@ -207,52 +244,6 @@
     const closedTasksMap = {};
     closedTasks.forEach(task => closedTasksMap[task.id] = task);
     return closedTasksMap
-  }
-
-  function enhanceDialog (mutationsList) {
-    mutationsList.forEach(item => {
-      if (item.addedNodes.length > 0) {
-        const firstChild = $(item.addedNodes[0]);
-        if (firstChild.attr('id') === 'iframe-triggerModal') {
-          // 任务详情弹窗
-          firstChild.off('load').on('load', function () {
-            const doc = firstChild[0].contentWindow.document;
-            enhanceHistoryList(doc);
-            const toolbar = $(doc.querySelector('.main-actions > .btn-toolbar'));
-
-            // 复制分支
-            const $copyId = $(document.createElement('a'));
-            $copyId.addClass('btn btn-link showinonlybody');
-            $copyId.html('<span class="text"></span> 复制分支');
-            const taskId = $(doc.querySelector('.page-title > span.label-id')).text();
-            $copyId.on('click', function () {
-              GM_setClipboard(`feature/${projectPrefix}-${taskId}`, { type: 'text', mimetype: 'text/plain' });
-            });
-            $copyId.appendTo(toolbar);
-
-            // 复制标题
-            const $copyTitle = $(document.createElement('a'));
-            $copyTitle.addClass('btn btn-link showinonlybody');
-            $copyTitle.html('<span class="text"></span> 复制标题');
-            $copyTitle.on('click', function () {
-              const title = $(doc.querySelector('.page-title > span.text')).attr('title');
-              GM_setClipboard(`${projectPrefix}-${taskId} ${title}`, { type: 'text', mimetype: 'text/plain' });
-            });
-            $copyTitle.appendTo(toolbar);
-
-            // 复制链接
-            const $copyLink = $(document.createElement('a'));
-            $copyLink.addClass('btn btn-link showinonlybody');
-            $copyLink.html('<span class="text"></span> 复制链接');
-            $copyLink.on('click', function () {
-              GM_setClipboard(`${urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
-            });
-            $copyLink.appendTo(toolbar);
-
-          });
-        }
-      }
-    });
   }
 
   function hiddenBoardItemWithPrimaryBtn (doc) {
@@ -297,26 +288,9 @@
     });
   }
 
-  function isAllText (btnArr) {
-    return btnArr.some(b => {
-      const trim = $(b).text().trim();
-      return !trim || trim === ALL_TEXT
-    })
-  }
-
-  const ALL_TEXT = '全部';
-  const NOT_CLOSED = '未关闭';
-  const CN_REG = /[^\x00-\xff]+/gm; // 过滤中文字符的正则
-
-  class Button {
-    constructor (name, exclusiveList) {
-      this.name = name;
-      this.exclusiveList = exclusiveList;
-    }
-  }
-
-  function enhanceRoleFilter (doc) {
-    if (!window.location.search.includes('kanban')) return
+  function enhanceRoleFilter (ctx) {
+    const doc = ctx.document;
+    if (!ctx._window.location.search.includes('kanban')) return
     if (doc.querySelectorAll('.custom-filter-btn').length) {
       hiddenBoardItemWithPrimaryBtn(doc);
       return
@@ -356,15 +330,15 @@
           // 如果没选中任何条件，则默认选中“全部”
           $(doc).find('.all-button').click();
         }
-        _window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames));
+        ctx._window.localStorage.setItem('_customerFilter_name', JSON.stringify(checkedNames));
         hiddenBoardItemWithPrimaryBtn(doc);
       });
       $btn.appendTo($mainMenu);
     });
-    const checkedNames = JSON.parse(_window.localStorage.getItem('_customerFilter_name'));
+    const checkedNames = JSON.parse(ctx._window.localStorage.getItem('_customerFilter_name'));
     if (checkedNames && checkedNames.length > 0) {
       if (!checkedNames.every(c => btnList.map(b => b.name).includes(c))) {
-        _window.localStorage.setItem('_customerFilter_name', '');
+        ctx._window.localStorage.setItem('_customerFilter_name', '');
         return
       }
       $(doc).find('.btn.custom-filter-btn').each((index, item) => {
@@ -378,49 +352,118 @@
     }
   }
 
-  // 历史记录只展示备注
-  function enhanceHistoryList (doc) {
-    if (doc.querySelectorAll('.histories-custom-filter-btn').length) return
-    const fn = function (type) {
-      $(doc.querySelectorAll('.histories-list li')).each(function () {
-        const $this = $(this);
-        if (type === 'hide' && $this.text().indexOf('备注') === -1) {
-          $this.hide();
-        } else {
-          $this.show();
-        }
-      });
-    };
-    const $titleBox = $(doc.querySelector('.histories .detail-title'));
-    const $hideBtn = $(doc.createElement('a'));
-    $hideBtn.addClass('btn btn-link pull-right histories-custom-filter-btn');
-    $hideBtn.html('只看备注');
-    $hideBtn.on('click', function () {
-      if ($hideBtn.html() === '只看备注') {
-        fn('hide');
-        $hideBtn.html('查看全部');
-      } else {
-        fn('show');
-        $hideBtn.html('只看备注');
-      }
-    });
-    $hideBtn.appendTo($titleBox);
+  const kanbanDataCache = {};
+
+  function enhanceKanBanClosedTaskWithCache (ctx) {
+    const executionID = new URL(ctx.tW.location.href).searchParams.get('executionID');
+    if (kanbanDataCache[executionID]) {
+      enhanceKanBanClosedTask(kanbanDataCache[executionID], ctx);
+    } else {
+      debouncedEnhanceKanBanClosedTask(ctx);
+    }
   }
 
-  // 任务弹窗关闭后 iframe 重新 reload了，所以需要监听
+  const debouncedEnhanceKanBanClosedTask = debounce(queryKanbanAndEnhanceKanBanClosedTask, 100);
+
+  function queryKanbanAndEnhanceKanBanClosedTask (ctx) {
+    const executionID = new URL(ctx.tW.location.href).searchParams.get('executionID');
+    $.get(`${ctx.urlDomain}/index.php?m=execution&f=kanban&t=json&executionID=${executionID}`, function (res) {
+      const kanbanData = JSON.parse(JSON.parse(res).data);
+      kanbanDataCache[executionID] = kanbanData;
+      enhanceKanBanClosedTask(kanbanData, ctx);
+    });
+  }
+
+  function enhanceKanBanClosedTask (kanbanData, ctx) {
+    const kanbanTasksMap = getKanbanTasksMap(kanbanData);
+    const closedTasksMap = getKanbanClosedTaskMap(kanbanTasksMap);
+    const tasksDom = [...ctx.document.querySelectorAll('.task-assignedTo,.bug-assignedTo')];
+    for (const taskDom of tasksDom) {
+      const u = new URL(taskDom.parentElement.previousElementSibling.href);
+      const taskID = u.searchParams.get('bugID') ? u.searchParams.get('bugID') : u.searchParams.get('taskID');
+      if (!closedTasksMap[taskID]) continue
+      const kanbanTask = kanbanTasksMap[taskID];
+      const $span = $(taskDom).find('span');
+      const closerName = kanbanData.realnames[kanbanTask.closedBy];
+      $span.text(`Closed(${closerName})`);
+      $span.css('max-width', '100px');
+    }
+
+    // 增强看板：增加角色过滤器
+    enhanceRoleFilter(ctx);
+  }
+
+  function enhanceKanBan (ctx) {
+    const document = ctx.document;
+    const target = $(document.querySelectorAll('.board-story'));
+    // 已经添加过了
+    if (target.find('a:contains("复制分支")').length > 0) return
+    enhanceKanBanStory(target, ctx);
+    enhanceKanBanTask(ctx);
+    enhanceKanBanClosedTaskWithCache(ctx);
+  }
+
+  function enhanceDialog (mutationsList, ctx) {
+    const document = ctx.document;
+    mutationsList.forEach(item => {
+      if (item.addedNodes.length > 0) {
+        const firstChild = $(item.addedNodes[0]);
+        if (firstChild.attr('id') === 'iframe-triggerModal') {
+          // 任务详情弹窗
+          firstChild.off('load').on('load', function () {
+            const doc = firstChild[0].contentWindow.document;
+            enhanceHistoryList(ctx);
+            const toolbar = $(doc.querySelector('.main-actions > .btn-toolbar'));
+
+            // 复制分支
+            const $copyId = $(document.createElement('a'));
+            $copyId.addClass('btn btn-link showinonlybody');
+            $copyId.html('<span class="text"></span> 复制分支');
+            const taskId = $(doc.querySelector('.page-title > span.label-id')).text();
+            $copyId.on('click', function () {
+              GM_setClipboard(`feature/${ctx.projectPrefix}-${taskId}`, { type: 'text', mimetype: 'text/plain' });
+            });
+            $copyId.appendTo(toolbar);
+
+            // 复制标题
+            const $copyTitle = $(document.createElement('a'));
+            $copyTitle.addClass('btn btn-link showinonlybody');
+            $copyTitle.html('<span class="text"></span> 复制标题');
+            $copyTitle.on('click', function () {
+              const title = $(doc.querySelector('.page-title > span.text')).attr('title');
+              GM_setClipboard(`${ctx.projectPrefix}-${taskId} ${title}`, { type: 'text', mimetype: 'text/plain' });
+            });
+            $copyTitle.appendTo(toolbar);
+
+            // 复制链接
+            const $copyLink = $(document.createElement('a'));
+            $copyLink.addClass('btn btn-link showinonlybody');
+            $copyLink.html('<span class="text"></span> 复制链接');
+            $copyLink.on('click', function () {
+              GM_setClipboard(`${ctx.urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
+            });
+            $copyLink.appendTo(toolbar);
+
+          });
+        }
+      }
+    });
+  }
+
   const executionIframe = document.querySelector('#appIframe-execution');
   if (executionIframe) {
+    const ctx = Context.of(executionIframe);
     executionIframe.onload = function () {
-      setTimeout(() => executionIframe.contentWindow.dispatchEvent(new Event('resize')), 500);
-      const doc = executionIframe.contentWindow.document;
-      enhanceTask(doc);
-      enhanceKanBan(doc);
-      enhanceHistoryList(doc);
+      setTimeout(() => ctx.window.dispatchEvent(new Event('resize')), 500);
+      const doc = ctx.document;
+      enhanceTask(ctx);
+      enhanceKanBan(ctx);
+      enhanceHistoryList(ctx);
       const observer = new MutationObserver((mutationsList) => {
-        enhanceTask(doc);
-        enhanceKanBan(doc);
-        enhanceDialog(mutationsList);
-        enhanceHistoryList(doc);
+        enhanceTask(ctx);
+        enhanceKanBan(ctx);
+        enhanceDialog(mutationsList, ctx);
+        enhanceHistoryList(ctx);
       });
       observer.observe(doc.body, {
         childList: true,
