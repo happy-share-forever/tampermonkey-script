@@ -2,14 +2,14 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.11
+// @version      2.12
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
 // @grant        GM_addStyle
 // @grant        GM_setClipboard
 // ==/UserScript==
-        
+
 (function () {
   'use strict';
 
