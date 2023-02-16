@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.14
+// @version      2.15
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -394,6 +394,9 @@
 
   function enhanceKanBan (ctx) {
     const document = ctx.document;
+    const $container = $(document.getElementById('mainMenu'));
+    if ($container.hasClass('enhanceKanBan')) return
+    $container.addClass('enhanceKanBan');
     const target = $(document.querySelectorAll('.board-story'));
     // 已经添加过了
     if (target.find('a:contains("复制分支")').length > 0) return
