@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.12
+// @version      2.13
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -335,10 +335,10 @@
       });
       $btn.appendTo($mainMenu);
     });
-    const checkedNames = JSON.parse(ctx._window.localStorage.getItem('_customerFilter_name'));
+    const checkedNames = JSON.parse(ctx._window.localStorage.getItem('_customerFilter_name') || '""');
     if (checkedNames && checkedNames.length > 0) {
       if (!checkedNames.every(c => btnList.map(b => b.name).includes(c))) {
-        ctx._window.localStorage.setItem('_customerFilter_name', '');
+        ctx._window.localStorage.setItem('_customerFilter_name', JSON.stringify(''));
         return
       }
       $(doc).find('.btn.custom-filter-btn').each((index, item) => {
