@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.16
+// @version      2.17
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -43,11 +43,13 @@
     executionIframe
     tW
     projectPrefix
+    kanbanRefreshTag
 
     constructor ({ executionIframe }) {
       this.executionIframe = executionIframe;
       this.tW = _window;
       this.projectPrefix = projectPrefix;
+      this.kanbanRefreshTag = false;
     }
 
     get window () {
@@ -64,6 +66,16 @@
 
     get document () {
       return this.executionIframe.contentWindow.document
+    }
+
+    get kanbanRefreshed () {
+      return this.kanbanRefreshTag === true
+    }
+    setKanbanRefreshTag () {
+      this.kanbanRefreshTag = true;
+    }
+    resetKanbanRefreshTag () {
+      this.kanbanRefreshTag = false;
     }
 
     static of (executionIframe) {
@@ -395,8 +407,9 @@
   function enhanceKanBan (ctx) {
     const document = ctx.document;
     const $container = $(document.getElementById('#kanban > table'));
-    if ($container.hasClass('enhanceKanBan')) return
+    if ($container.hasClass('enhanceKanBan') && ctx.kanbanRefreshed) return
     $container.addClass('enhanceKanBan');
+    ctx.setKanbanRefreshTag();
     const target = $(document.querySelectorAll('.board-story'));
     // 已经添加过了
     if (target.find('a:contains("复制分支")').length > 0) return
@@ -463,6 +476,7 @@
         enhanceKanBan(ctx);
         enhanceHistoryList(ctx);
         const observer = new MutationObserver((mutations) => {
+          ctx.resetKanbanRefreshTag();
           enhanceTask(ctx);
           enhanceKanBan(ctx);
           enhanceDialog(mutations, ctx);
