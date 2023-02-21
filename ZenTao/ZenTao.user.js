@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.15
+// @version      2.16
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -394,7 +394,7 @@
 
   function enhanceKanBan (ctx) {
     const document = ctx.document;
-    const $container = $(document.getElementById('mainMenu'));
+    const $container = $(document.getElementById('#kanban > table'));
     if ($container.hasClass('enhanceKanBan')) return
     $container.addClass('enhanceKanBan');
     const target = $(document.querySelectorAll('.board-story'));
@@ -405,9 +405,9 @@
     enhanceKanBanClosedTaskWithCache(ctx);
   }
 
-  function enhanceDialog (mutationsList, ctx) {
+  function enhanceDialog (mutations, ctx) {
     const document = ctx.document;
-    mutationsList.forEach(item => {
+    mutations.forEach(item => {
       if (item.addedNodes.length > 0) {
         const firstChild = $(item.addedNodes[0]);
         if (firstChild.attr('id') === 'iframe-triggerModal') {
@@ -452,26 +452,40 @@
     });
   }
 
-  const executionIframe = document.querySelector('#appIframe-execution');
-  if (executionIframe) {
-    const ctx = Context.of(executionIframe);
-    executionIframe.onload = function () {
-      setTimeout(() => ctx.window.dispatchEvent(new Event('resize')), 500);
-      const doc = ctx.document;
-      enhanceTask(ctx);
-      enhanceKanBan(ctx);
-      enhanceHistoryList(ctx);
-      const observer = new MutationObserver((mutationsList) => {
+  function enhanceExecution () {
+    const executionIframe = document.querySelector('#appIframe-execution');
+    if (executionIframe) {
+      const ctx = Context.of(executionIframe);
+      executionIframe.onload = function () {
+        setTimeout(() => ctx.window.dispatchEvent(new Event('resize')), 500);
+        const doc = ctx.document;
         enhanceTask(ctx);
         enhanceKanBan(ctx);
-        enhanceDialog(mutationsList, ctx);
         enhanceHistoryList(ctx);
-      });
-      observer.observe(doc.body, {
-        childList: true,
-        subtree: true
-      });
-    };
+        const observer = new MutationObserver((mutations) => {
+          enhanceTask(ctx);
+          enhanceKanBan(ctx);
+          enhanceDialog(mutations, ctx);
+          enhanceHistoryList(ctx);
+        });
+        observer.observe(doc.body, {
+          childList: true,
+          subtree: true
+        });
+      };
+    }
+  }
+
+  enhanceExecution();
+  const observer = new MutationObserver(() => {
+    enhanceExecution();
+  });
+  const target = document.querySelector('#apps');
+  if (target) {
+    observer.observe(target, {
+      childList: true,
+      subtree: true
+    });
   }
 
 })();
