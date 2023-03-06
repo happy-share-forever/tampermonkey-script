@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.20
+// @version      2.21
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -407,7 +407,7 @@
   function enhanceKanBan (ctx) {
     const document = ctx.document;
     const $container = $(document.querySelector('#kanban > table'));
-    if ($container.hasClass('enhanceKanBan') || ctx.kanbanRefreshed) return
+    if ($container.hasClass('enhanceKanBan') && ctx.kanbanRefreshed) return
     $container.addClass('enhanceKanBan');
     ctx.setKanbanRefreshTag();
     const target = $(document.querySelectorAll('.board-story'));
@@ -480,7 +480,6 @@
         enhanceKanBan(ctx);
         enhanceHistoryList(ctx);
         const observer = new MutationObserver((mutations) => {
-          ctx.resetKanbanRefreshTag();
           enhanceTask(ctx);
           enhanceKanBan(ctx);
           enhanceDialog(mutations, ctx);
