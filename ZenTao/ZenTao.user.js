@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.21
+// @version      2.23
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -105,7 +105,7 @@
     const $titleBox = $(doc.querySelector('.histories .detail-title'));
     const $hideBtn = $(doc.createElement('a'));
     $hideBtn.addClass('btn btn-link pull-right histories-custom-filter-btn');
-    $hideBtn.html('只看备注');
+    $hideBtn.html('查看全部');
     $hideBtn.on('click', function () {
       if ($hideBtn.html() === '只看备注') {
         fn('hide');
@@ -116,6 +116,8 @@
       }
     });
     $hideBtn.appendTo($titleBox);
+    // 默认查看
+    fn('hide');
   }
 
   function enhanceTask (ctx) {
@@ -212,7 +214,7 @@
       const $copyLink = $(document.createElement('li'));
       $copyLink.html('<a>复制链接</a>');
       $copyLink.on('click', function () {
-        const link = `${urlDomain}/index.php?m=story&f=view&storyID=${storyId}`;
+        const link = `${ctx.urlDomain}/index.php?m=story&f=view&storyID=${storyId}`;
         GM_setClipboard(link, { type: 'text', mimetype: 'text/plain' });
       });
       $copyLink.appendTo($ul);
