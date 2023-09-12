@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.23
+// @version      2.24
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -180,6 +180,9 @@
       const trim = $(b).text().trim();
       return !trim || trim === ALL_TEXT
     })
+  }
+  function delay (fn, delay = 200) {
+    setTimeout(fn, delay);
   }
 
   class Button {
@@ -471,6 +474,15 @@
     });
   }
 
+  const fixBackBtn = function (ctx) {
+    delay(() => {
+      const $aDom = $(ctx.window.document).find('a[href*="json"]');
+      $aDom.each((idx, item) => {
+        item.href="javascript:window.history.back()";
+      });
+    });
+  };
+  const debouncedFixBackBtn = debounce(fixBackBtn, 1000);
   function enhanceExecution () {
     const executionIframe = document.querySelector('#appIframe-execution');
     if (executionIframe) {
@@ -481,11 +493,13 @@
         enhanceTask(ctx);
         enhanceKanBan(ctx);
         enhanceHistoryList(ctx);
+        debouncedFixBackBtn(ctx);
         const observer = new MutationObserver((mutations) => {
           enhanceTask(ctx);
           enhanceKanBan(ctx);
           enhanceDialog(mutations, ctx);
           enhanceHistoryList(ctx);
+          debouncedFixBackBtn(ctx);
         });
         observer.observe(doc.body, {
           childList: true,
