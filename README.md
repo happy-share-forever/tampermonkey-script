@@ -11,8 +11,9 @@
 
 ## 脚本列表
 
-| 脚本名    | 描述                                     | 安装                                                                                                           |
-|--------|----------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| ZenTao | 禅道样式辅助 & 功能扩展（适用于禅道v10.1专业版，其他版本兼容性未知） | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/ZenTao/ZenTao.user.js) |
-| Codeup | Codeup 功能扩展                            | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/Codeup/Codeup.user.js) |
-| DMS    | DMS 功能扩展                               | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/DMS/DMS.user.js)       |
+| 脚本名     | 描述                                     | 安装                                                                                                             |
+|---------|----------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| ZenTao  | 禅道样式辅助 & 功能扩展（适用于禅道v10.1专业版，其他版本兼容性未知） | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/ZenTao/ZenTao.user.js)   |
+| Codeup  | Codeup 功能扩展                            | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/Codeup/Codeup.user.js)   |
+| DMS     | DMS 功能扩展                               | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/DMS/DMS.user.js)         |
+| Kubenav | Kubenav 修复弹框                           | [点击安装](https://raw.githubusercontent.com/happy-share-forever/tampermonkey-script/main/Kubenav/kubenav.user.js) |
