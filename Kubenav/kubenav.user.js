@@ -1,16 +1,14 @@
 // ==UserScript==
 // @name         kubenav
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      1.0
 // @description  try to take over the world!
-// @author       JiajieH
+// @author       JiajieH, happy share forever core team
 // @include      /^http(s)?:\/\/dashboard(-.*)?.*$/
-// @grant        none
+// @grant        GM_addStyle
 // ==/UserScript==
 
 (function() {
     'use strict';
-    var style = document.createElement('style')
-    style.innerHTML = 'ion-popover [popover]:not(:popover-open):not(dialog[open]) {display: contents;}'
-    document.head.append(style)
+    GM_addStyle('ion-popover [popover]:not(:popover-open):not(dialog[open]) {display: contents;}')
 })();
