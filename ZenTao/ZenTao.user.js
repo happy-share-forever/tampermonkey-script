@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ZenTao
 // @namespace    https://iin.ink
-// @version      2.24
+// @version      2.25
 // @description  ZenTao style and function enhancement
 // @author       happy share forever core team
 // @include      /^https:\/\/zentao.*$/
@@ -460,8 +460,12 @@
             $copyLink.addClass('btn btn-link showinonlybody');
             $copyLink.html('<span class="text"></span> 复制链接');
             $copyLink.on('click', function () {
-              if (doc.querySelector('.tabs').textContent.indexOf('任务的一生') !== -1) {
+              const textContent = doc.querySelector('.tabs').textContent;
+              console.log('textContent', textContent);
+              if (textContent.indexOf('任务的一生') !== -1) {
                 GM_setClipboard(`${ctx.urlDomain}/index.php?m=task&f=view&taskID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
+              } else if (textContent.indexOf('Bug类型') !== -1) {
+                GM_setClipboard(`${ctx.urlDomain}/index.php?m=bug&f=view&bugID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
               } else {
                 GM_setClipboard(`${ctx.urlDomain}/index.php?m=story&f=view&storyID=${taskId}`, { type: 'text', mimetype: 'text/plain' });
               }
